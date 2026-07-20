@@ -1,0 +1,480 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: SeletaPsi API - Plataforma de psicólogos qualificados
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: psychologists
+    description: Psychologist operations
+  - name: admin
+    description: Admin operations
+  - name: plans
+    description: Plans operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /psychologists:
+    get:
+      operationId: listPsychologists
+      tags: [psychologists]
+      summary: List approved psychologists with filters
+      parameters:
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+        - name: specialty
+          in: query
+          schema: { type: string }
+        - name: therapeutic_line
+          in: query
+          schema: { type: string }
+        - name: modality
+          in: query
+          schema: { type: string, enum: [online, presencial, ambos] }
+        - name: public_type
+          in: query
+          schema: { type: string }
+        - name: session_value_max
+          in: query
+          schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 12 }
+      responses:
+        "200":
+          description: List of psychologists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PsychologistListResponse"
+    post:
+      operationId: createPsychologist
+      tags: [psychologists]
+      summary: Register a new psychologist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PsychologistInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Psychologist"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /psychologists/{id}:
+    get:
+      operationId: getPsychologist
+      tags: [psychologists]
+      summary: Get a psychologist by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Psychologist detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Psychologist"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updatePsychologist
+      tags: [psychologists]
+      summary: Update a psychologist profile (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PsychologistUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Psychologist"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deletePsychologist
+      tags: [psychologists]
+      summary: Delete a psychologist (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /psychologists/{id}/status:
+    patch:
+      operationId: updatePsychologistStatus
+      tags: [psychologists]
+      summary: Approve, reject or suspend a psychologist (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusUpdate"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Psychologist"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/psychologists:
+    get:
+      operationId: adminListPsychologists
+      tags: [admin]
+      summary: List all psychologists with all statuses (admin only)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, suspended]
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+        - name: specialty
+          in: query
+          schema: { type: string }
+        - name: therapeutic_line
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: List of all psychologists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PsychologistListResponse"
+
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [plans]
+      summary: List available subscription plans
+      responses:
+        "200":
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plan"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    Psychologist:
+      type: object
+      required: [id, full_name, crp, crp_state, crp_active, cpf, email, phone, whatsapp, city, state, modality, therapeutic_lines, specialties, session_duration, session_value, status, created_at]
+      properties:
+        id: { type: integer }
+        full_name: { type: string }
+        crp: { type: string }
+        crp_state: { type: string }
+        crp_active: { type: boolean }
+        cpf: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        whatsapp: { type: string }
+        city: { type: string }
+        state: { type: string }
+        photo_url: { type: ["string", "null"] }
+        mini_curriculum: { type: ["string", "null"] }
+        education_levels:
+          type: array
+          items: { type: string }
+        education_institution: { type: ["string", "null"] }
+        therapeutic_lines:
+          type: array
+          items: { type: string }
+        specialties:
+          type: array
+          items: { type: string }
+        public_types:
+          type: array
+          items: { type: string }
+        modality:
+          type: string
+          enum: [online, presencial, ambos]
+        session_duration: { type: integer }
+        session_value: { type: integer }
+        instagram: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
+        status:
+          type: string
+          enum: [pending, approved, rejected, suspended]
+        created_at:
+          type: string
+          format: date-time
+        updated_at: { type: ["string", "null"] }
+
+    PsychologistInput:
+      type: object
+      required: [full_name, crp, crp_state, crp_active, cpf, email, phone, whatsapp, city, state, modality, therapeutic_lines, specialties, session_duration, session_value, terms_accepted]
+      properties:
+        full_name: { type: string }
+        crp: { type: string }
+        crp_state: { type: string }
+        crp_active: { type: boolean }
+        cpf: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        whatsapp: { type: string }
+        city: { type: string }
+        state: { type: string }
+        photo_url: { type: string }
+        mini_curriculum: { type: string }
+        education_levels:
+          type: array
+          items: { type: string }
+        education_institution: { type: string }
+        therapeutic_lines:
+          type: array
+          items: { type: string }
+        specialties:
+          type: array
+          items: { type: string }
+        public_types:
+          type: array
+          items: { type: string }
+        modality:
+          type: string
+          enum: [online, presencial, ambos]
+        session_duration:
+          type: integer
+          enum: [30, 40, 50, 60]
+        session_value:
+          type: integer
+          minimum: 50
+          maximum: 80
+        instagram: { type: string }
+        website: { type: string }
+        terms_accepted: { type: boolean }
+
+    PsychologistUpdate:
+      type: object
+      properties:
+        full_name: { type: string }
+        city: { type: string }
+        state: { type: string }
+        photo_url: { type: string }
+        mini_curriculum: { type: string }
+        education_levels:
+          type: array
+          items: { type: string }
+        education_institution: { type: string }
+        therapeutic_lines:
+          type: array
+          items: { type: string }
+        specialties:
+          type: array
+          items: { type: string }
+        public_types:
+          type: array
+          items: { type: string }
+        modality:
+          type: string
+          enum: [online, presencial, ambos]
+        session_duration:
+          type: integer
+          enum: [30, 40, 50, 60]
+        session_value:
+          type: integer
+          minimum: 50
+          maximum: 80
+        instagram: { type: string }
+        website: { type: string }
+
+    StatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, approved, rejected, suspended]
+
+    PsychologistListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Psychologist"
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+
+    AdminLoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+
+    AdminSession:
+      type: object
+      required: [token, username]
+      properties:
+        token: { type: string }
+        username: { type: string }
+
+    AdminStats:
+      type: object
+      required: [total, pending, approved, rejected, suspended]
+      properties:
+        total: { type: integer }
+        pending: { type: integer }
+        approved: { type: integer }
+        rejected: { type: integer }
+        suspended: { type: integer }
+
+    Plan:
+      type: object
+      required: [id, name, slug, price_cents, duration_months, description, benefits]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        price_cents: { type: integer }
+        duration_months: { type: integer }
+        description: { type: string }
+        benefits:
+          type: array
+          items: { type: string }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
